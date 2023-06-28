@@ -16,6 +16,7 @@ hostinject (Host Header Injection) Tool is a Python script that allows you to pe
 - Random User-Agent selection from a wordlist file or custom User-Agent string
 - Verbose mode for detailed output
 - Support for request body in POST requests
+- Support Proxy HTTP, HTTPS, SOCKS4, SOCKS4a, SOCKS5
 
 ## Installation
 ***Requirements***
@@ -53,6 +54,8 @@ optional arguments:
   -b BODY, --body BODY  Body request as string or file
   -U USER_AGENT, --user-agent USER_AGENT
                         User-Agent string or wordlist file
+  -p PROXY, --proxy PROXY
+                        Proxy server (e.g., http://proxy.example.com:8080 or socks5://proxy.example.com:1080)
   -v, --verbose         Enable verbose mode
 ```
 
