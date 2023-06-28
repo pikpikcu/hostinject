@@ -24,7 +24,7 @@ hostinject (Host Header Injection) Tool is a Python script that allows you to pe
 
 1. Clone the repository:
    ```shell
-   git clone https://github.com/example/hostinject.git
+   git clone https://github.com/pikpikcu/hostinject.git
    cd hostinject
    pip install -r requirements.txt
    python3 hostinject.py
