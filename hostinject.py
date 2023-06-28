@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import argparse
 import os
 import random
@@ -8,35 +6,26 @@ import requests
 
 init(autoreset=True)
 
-DEFAULT_WORDLIST = [
-    'Host',
-    'Max-Forwards',
-    'Origin',
-    'Proxy-Authorization',
-    'Range',
-    'Referer',
-    'Upgrade',
-    'User-Agent',
-    'X-Forwarded-For',
-    'X-Forwarded-Host'
-]
-
 DEFAULT_ATTACKER = 'attacker.com'
 DEFAULT_REDIRECTS = 10
 DEFAULT_SSL = False
 DEFAULT_METHOD = 'GET'
 DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
 
+
 def get_random_user_agent(user_agents):
     return random.choice(user_agents).strip()
 
-def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use_ssl, method, user_agent, verbose, body, proxy):
+
+def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects, use_ssl, method, user_agent, verbose,
+                           body, proxy):
     try:
         if wordlists:
             with open(wordlists, 'r') as file:
                 headers = file.readlines()
         else:
-            headers = DEFAULT_WORDLIST
+            headers = ['Host', 'Max-Forwards', 'Origin', 'Proxy-Authorization', 'Range', 'Referer', 'Upgrade',
+                           'User-Agent', 'X-Forwarded-For', 'X-Forwarded-Host']
 
         for header in headers:
             headers_dict = {
@@ -60,7 +49,8 @@ def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use
                     'https': proxy
                 }
 
-            response = requests.request(method, url, headers=headers_dict, allow_redirects=max_redirects, verify=use_ssl, data=body, proxies=proxies)
+            response = requests.request(method, url, headers=headers_dict, allow_redirects=max_redirects,
+                                        verify=use_ssl, data=body, proxies=proxies)
 
             if verbose:
                 print(Fore.CYAN + '[Response]')
@@ -68,7 +58,93 @@ def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use
                 print(Fore.CYAN + 'Headers:', response.headers)
                 print(Fore.CYAN + 'Body:', response.text)
 
-            if attacker.lower() in response.headers or attacker.lower() in response.content.decode('utf-8').lower():
+            # Web Cache Poisoning Detected
+            if 'Cache-Control' in response.headers and 'private' not in response.headers['Cache-Control']:
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Cache-Control] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+            if 'Pragma' in response.headers and response.headers['Pragma'] == 'public':
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Pragma] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+
+            if 'Expires' in response.headers:
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Expires] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+
+            if 'ETag' in response.headers:
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Etag] ' + Fore.GREEN + '[Potensial Web Cache Poisoning]' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+
+            if 'Vary' in response.headers:
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Vary] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+
+            if 'X-Cache' in response.headers:
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: X-Cache] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+                print(result)
+                if output_file:
+                    with open(output_file, 'a') as output:
+                        output.write(result + '\n')
+                break
+
+            # CORS (Cross-Origin Resource Sharing) Detected
+            if 'Access-Control-Allow-Origin' in response.headers:
+                allow_origin = response.headers.get('Access-Control-Allow-Origin')
+                if allow_origin != '*' and attacker.lower() not in allow_origin.lower():
+                    result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Potential CORS Misconfiguration]' + Fore.WHITE + url
+                    print(result)
+                    if output_file:
+                        with open(output_file, 'a') as output:
+                            output.write(result + '\n')
+
+            if 'Access-Control-Allow-Credentials' in response.headers:
+                allow_credentials = response.headers.get('Access-Control-Allow-Credentials')
+                if allow_credentials == 'true' and attacker.lower() not in response.headers.get('Access-Control-Allow-Origin', '').lower():
+                    result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Potential CORS Misconfiguration]' + Fore.WHITE + url
+                    print(result)
+                    if output_file:
+                        with open(output_file, 'a') as output:
+                            output.write(result + '\n')
+
+            if 'Access-Control-Allow-Methods' in response.headers:
+                allow_methods = response.headers.get('Access-Control-Allow-Methods')
+                if allow_methods and method not in allow_methods:
+                    result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Potential CORS Misconfiguration]' + Fore.WHITE + url
+                    print(result)
+                    if output_file:
+                        with open(output_file, 'a') as output:
+                            output.write(result + '\n')
+
+            if 'Access-Control-Allow-Headers' in response.headers:
+                allow_headers = response.headers.get('Access-Control-Allow-Headers')
+                if allow_headers and 'origin' not in allow_headers.lower():
+                    result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Potential CORS Misconfiguration]' + Fore.WHITE + url
+                    print(result)
+                    if output_file:
+                        with open(output_file, 'a') as output:
+                            output.write(result + '\n')
+            
+            # Host Header Injection Detected
+            elif attacker.lower() in response.headers or attacker.lower() in response.content.decode('utf-8').lower():
                 result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: ' + header.strip() + '] ' + Fore.WHITE + url
                 print(result)
                 if output_file:
@@ -91,6 +167,7 @@ def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use
     except requests.exceptions.RequestException as e:
         print(Fore.MAGENTA + '[Error] [{}] {}'.format(type(e).__name__, e))
 
+
 def main():
     parser = argparse.ArgumentParser(description='Hostinject (Host Header Injection Scanners)')
     parser.add_argument('-u', '--url', help='Target URL')
@@ -105,7 +182,7 @@ def main():
     parser.add_argument('-U', '--user-agent', help='User-Agent string or wordlist file')
     parser.add_argument('-p', '--proxy', help='Proxy server (e.g., http://proxy.example.com:8080 or socks5://proxy.example.com:1080)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose mode')
-    
+
     args = parser.parse_args()
 
     if not args.url and not args.list:
@@ -125,21 +202,23 @@ def main():
         else:
             args.user_agent = args.user_agent.strip()
 
+    urls = []
     if args.url:
-        user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
-        inject_host_header(args.url, args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body, args.proxy)
-
+        urls.append(args.url)
     elif args.list:
         if os.path.isdir(args.list):
             parser.error('Error: The provided list argument is a directory.')
         try:
             with open(args.list, 'r') as file:
                 urls = file.readlines()
-                for url in urls:
-                    user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
-                    inject_host_header(url.strip(), args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body, args.proxy)
         except FileNotFoundError:
             print('Error: File not found:', args.list)
+
+    for url in urls:
+        user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
+        detect_vulnerabilities(url.strip(), args.wordlists, args.attacker, args.output, args.redirect, args.ssl,
+                               args.method, user_agent, args.verbose, args.body, args.proxy)
+
 
 if __name__ == '__main__':
     main()
