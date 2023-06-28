@@ -30,7 +30,7 @@ DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.
 def get_random_user_agent(user_agents):
     return random.choice(user_agents).strip()
 
-def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use_ssl, method, user_agent, verbose, body):
+def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use_ssl, method, user_agent, verbose, body, proxy):
     try:
         if wordlists:
             with open(wordlists, 'r') as file:
@@ -51,8 +51,16 @@ def inject_host_header(url, wordlists, attacker, output_file, max_redirects, use
                 print(Fore.CYAN + 'Method:', method)
                 print(Fore.CYAN + 'Headers:', headers_dict)
                 print(Fore.CYAN + 'Body:', body)
+                print(Fore.CYAN + 'Proxy:', proxy)
 
-            response = requests.request(method, url, headers=headers_dict, allow_redirects=max_redirects, verify=use_ssl, data=body)
+            proxies = None
+            if proxy:
+                proxies = {
+                    'http': proxy,
+                    'https': proxy
+                }
+
+            response = requests.request(method, url, headers=headers_dict, allow_redirects=max_redirects, verify=use_ssl, data=body, proxies=proxies)
 
             if verbose:
                 print(Fore.CYAN + '[Response]')
@@ -95,6 +103,7 @@ def main():
     parser.add_argument('-x', '--method', default=DEFAULT_METHOD, help='HTTP method')
     parser.add_argument('-b', '--body', help='Body request as string or file')
     parser.add_argument('-U', '--user-agent', help='User-Agent string or wordlist file')
+    parser.add_argument('-p', '--proxy', help='Proxy server (e.g., http://proxy.example.com:8080 or socks5://proxy.example.com:1080)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose mode')
     
     args = parser.parse_args()
@@ -118,7 +127,7 @@ def main():
 
     if args.url:
         user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
-        inject_host_header(args.url, args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body)
+        inject_host_header(args.url, args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body, args.proxy)
 
     elif args.list:
         if os.path.isdir(args.list):
@@ -128,7 +137,7 @@ def main():
                 urls = file.readlines()
                 for url in urls:
                     user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
-                    inject_host_header(url.strip(), args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body)
+                    inject_host_header(url.strip(), args.wordlists, args.attacker, args.output, args.redirect, args.ssl, args.method, user_agent, args.verbose, args.body, args.proxy)
         except FileNotFoundError:
             print('Error: File not found:', args.list)
 
