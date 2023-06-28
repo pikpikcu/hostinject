@@ -7,40 +7,66 @@ hostinject (Host Header Injection) Tool is a Python script that allows you to pe
 
 ## Features
 
-- Injects custom headers with an attacker-controlled value
-- Supports a list of target URLs from a file
-- Allows customization of the maximum number of redirects
-- Provides SSL verification option
-- Outputs the results to the console and an optional output file
+- Host Header Injection scanning on single URLs or a list of URLs
+- Customizable header values using a wordlist file
+- Option to specify the attacker domain
+- Ability to set the maximum number of redirects
+- SSL verification enable/disable option
+- Support for various HTTP methods
+- Random User-Agent selection from a wordlist file or custom User-Agent string
+- Verbose mode for detailed output
+- Support for request body in POST requests
 
-## Requirements
-
+## Installation
+***Requirements***
 - Python 3.x
-- Requests library (`pip install requests`)
-- Colorama library (`pip install colorama`)
 
+1. Clone the repository:
+   ```shell
+   git clone https://github.com/example/hostinject.git
+   cd hostinject
+   pip install -r requirements.txt
+   python3 hostinject.py
+   ```
+   
 ## Usage
-```
-python hostinject.py [-h] [-u URL] [-l LIST] [-w WORDLISTS] [-a ATTACKER]
-[-o OUTPUT] [-r REDIRECT] [-s]
+```shell
+usage: hostinject.py [-h] [-u URL] [-l LIST] [-w WORDLISTS] [-a ATTACKER] [-o OUTPUT] [-r REDIRECT] [-s] [-x METHOD] [-b BODY] [-U USER_AGENT] [-v]
+
+Hostinject (Host Header Injection Scanners)
 
 optional arguments:
--h, --help show this help message and exit
--u URL, --url URL Target URL
--l LIST, --list LIST List of target URLs
--w WORDLISTS, --wordlists WORDLISTS Wordlist file containing header values
--a ATTACKER, --attacker ATTACKER Attacker domain
--o OUTPUT, --output OUTPUT Output file
--r REDIRECT, --redirect REDIRECT Maximum number of redirects (default: 10)
--s, --ssl Enable SSL verification (default: False)
+  -h, --help            show this help message and exit
+  -u URL, --url URL     Target URL
+  -l LIST, --list LIST  List of target URLs
+  -w WORDLISTS, --wordlists WORDLISTS
+                        Wordlist file containing header values
+  -a ATTACKER, --attacker ATTACKER
+                        Attacker domain
+  -o OUTPUT, --output OUTPUT
+                        Output file
+  -r REDIRECT, --redirect REDIRECT
+                        Maximum number of redirects
+  -s, --ssl             Enable SSL verification
+  -x METHOD, --method METHOD
+                        HTTP method
+  -b BODY, --body BODY  Body request as string or file
+  -U USER_AGENT, --user-agent USER_AGENT
+                        User-Agent string or wordlist file
+  -v, --verbose         Enable verbose mode
 ```
 
-- Use either the `-u` or `-l` option to provide a single URL or a list of URLs, respectively.
-- The `-w` option allows you to specify a file containing custom header values to be injected.
-- The `-a` option sets the attacker domain for the injected headers.
-- The `-o` option specifies the output file to store the results.
-- The `-r` option allows you to customize the maximum number of redirects (default: 10).
-- Use the `-s` option to enable SSL verification (default: False).
+- `-u, --url`: Target URL to scan.
+- `-l, --list`: File containing a list of target URLs to scan.
+- `-w, --wordlists`: Wordlist file containing header values (default: predefined wordlist).
+- `-a, --attacker`: Attacker domain to be injected (default: attacker.com).
+- `-o, --output`: Output file to save the scan results.
+- `-r, --redirect`: Maximum number of redirects to follow (default: 10).
+- `-s, --ssl`: Enable SSL verification.
+- `-x, --method`: HTTP method to use (default: GET).
+- `-b, --body`: Request body as a string or file for POST requests.
+- `-U, --user-agent`: User-Agent string or wordlist file (default: random User-Agent from predefined list).
+- `-v, --verbose`: Enable verbose mode.
 
 ## Examples
 
