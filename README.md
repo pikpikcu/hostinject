@@ -28,14 +28,10 @@ optional arguments:
 -h, --help show this help message and exit
 -u URL, --url URL Target URL
 -l LIST, --list LIST List of target URLs
--w WORDLISTS, --wordlists WORDLISTS
-Wordlist file containing header values
--a ATTACKER, --attacker ATTACKER
-Attacker domain
--o OUTPUT, --output OUTPUT
-Output file
--r REDIRECT, --redirect REDIRECT
-Maximum number of redirects (default: 10)
+-w WORDLISTS, --wordlists WORDLISTS Wordlist file containing header values
+-a ATTACKER, --attacker ATTACKER Attacker domain
+-o OUTPUT, --output OUTPUT Output file
+-r REDIRECT, --redirect REDIRECT Maximum number of redirects (default: 10)
 -s, --ssl Enable SSL verification (default: False)
 ```
 
