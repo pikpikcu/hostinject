@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import argparse
 import os
 from colorama import init, Fore
