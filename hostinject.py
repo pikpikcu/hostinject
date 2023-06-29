@@ -18,7 +18,7 @@ def get_random_user_agent(user_agents):
 
 
 def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects, use_ssl, method, user_agent, verbose,
-                           body, proxy):
+                           body, proxy, debug, recursive):
     try:
         if wordlists:
             with open(wordlists, 'r') as file:
@@ -27,6 +27,9 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
             headers = ['Host', 'Max-Forwards', 'Origin', 'Proxy-Authorization', 'Range', 'Referer', 'Upgrade',
                            'User-Agent', 'X-Forwarded-For', 'X-Forwarded-Host']
 
+        cache_poisoning_detected = False  # Flag to track cache poisoning detection
+        cors_detected = False  # Flag to track CORS
+
         for header in headers:
             headers_dict = {
                 'Host': url.split('/')[2],
@@ -34,7 +37,7 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                 header.strip(): attacker
             }
 
-            if verbose:
+            if debug:
                 print(Fore.CYAN + '[Request]')
                 print(Fore.CYAN + 'URL:', url)
                 print(Fore.CYAN + 'Method:', method)
@@ -52,59 +55,27 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
             response = requests.request(method, url, headers=headers_dict, allow_redirects=max_redirects,
                                         verify=use_ssl, data=body, proxies=proxies)
 
-            if verbose:
+            if debug:
                 print(Fore.CYAN + '[Response]')
                 print(Fore.CYAN + 'Status Code:', response.status_code)
                 print(Fore.CYAN + 'Headers:', response.headers)
                 print(Fore.CYAN + 'Body:', response.text)
 
             # Web Cache Poisoning Detected
-            if 'Cache-Control' in response.headers and 'private' not in response.headers['Cache-Control']:
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Cache-Control] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
+            if not cache_poisoning_detected and (
+                    'Cache-Control' in response.headers and 'private' not in response.headers['Cache-Control'] or
+                    'Pragma' in response.headers and response.headers['Pragma'] == 'public' or
+                    'Expires' in response.headers or
+                    'ETag' in response.headers or
+                    'Vary' in response.headers and response.headers.get('Vary', '').lower() in ['Origin', 'Accept-Encoding'] or
+                    'X-Cache' in response.headers and response.headers.get('X-Cache', '').lower() in ['hit', 'miss']
+            ):
+                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
                 print(result)
                 if output_file:
                     with open(output_file, 'a') as output:
                         output.write(result + '\n')
-                break
-            if 'Pragma' in response.headers and response.headers['Pragma'] == 'public':
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Pragma] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
-                print(result)
-                if output_file:
-                    with open(output_file, 'a') as output:
-                        output.write(result + '\n')
-                break
-
-            if 'Expires' in response.headers:
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Expires] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
-                print(result)
-                if output_file:
-                    with open(output_file, 'a') as output:
-                        output.write(result + '\n')
-                break
-
-            if 'ETag' in response.headers:
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Etag] ' + Fore.GREEN + '[Potensial Web Cache Poisoning]' + Fore.WHITE + url
-                print(result)
-                if output_file:
-                    with open(output_file, 'a') as output:
-                        output.write(result + '\n')
-                break
-
-            if 'Vary' in response.headers:
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: Vary] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
-                print(result)
-                if output_file:
-                    with open(output_file, 'a') as output:
-                        output.write(result + '\n')
-                break
-
-            if 'X-Cache' in response.headers:
-                result = Fore.GREEN + '[Vulnerability] ' + Fore.YELLOW + '[Header: X-Cache] ' + Fore.GREEN + '[Potensial Web Cache Poisoning] ' + Fore.WHITE + url
-                print(result)
-                if output_file:
-                    with open(output_file, 'a') as output:
-                        output.write(result + '\n')
-                break
+                cache_poisoning_detected = True 
 
             # CORS (Cross-Origin Resource Sharing) Detected
             if 'Access-Control-Allow-Origin' in response.headers:
@@ -115,6 +86,7 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                     if output_file:
                         with open(output_file, 'a') as output:
                             output.write(result + '\n')
+                    cors_detected = True
 
             if 'Access-Control-Allow-Credentials' in response.headers:
                 allow_credentials = response.headers.get('Access-Control-Allow-Credentials')
@@ -124,6 +96,7 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                     if output_file:
                         with open(output_file, 'a') as output:
                             output.write(result + '\n')
+                    cors_detected = True
 
             if 'Access-Control-Allow-Methods' in response.headers:
                 allow_methods = response.headers.get('Access-Control-Allow-Methods')
@@ -133,6 +106,7 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                     if output_file:
                         with open(output_file, 'a') as output:
                             output.write(result + '\n')
+                    cors_detected = True
 
             if 'Access-Control-Allow-Headers' in response.headers:
                 allow_headers = response.headers.get('Access-Control-Allow-Headers')
@@ -142,6 +116,7 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                     if output_file:
                         with open(output_file, 'a') as output:
                             output.write(result + '\n')
+                    cors_detected = True
             
             # Host Header Injection Detected
             elif attacker.lower() in response.headers or attacker.lower() in response.content.decode('utf-8').lower():
@@ -150,13 +125,14 @@ def detect_vulnerabilities(url, wordlists, attacker, output_file, max_redirects,
                 if output_file:
                     with open(output_file, 'a') as output:
                         output.write(result + '\n')
-                break
-        else:
-            result = Fore.RED + '[No Vulnerability] ' + Fore.WHITE + url
-            print(result)
-            if output_file:
-                with open(output_file, 'a') as output:
-                    output.write(result + '\n')
+            elif verbose:
+                result = Fore.RED + '[No Vulnerability] ' + Fore.YELLOW + '[Header: ' + header.strip() + '] ' + Fore.WHITE + url
+                print(result)
+
+            elif recursive:
+                for header in headers:
+                    detect_vulnerabilities(url, new_header.strip(), attacker, output_file, max_redirects, use_ssl, method, user_agent,
+                                        verbose, body, proxy, debug, recursive=False)
 
     except requests.exceptions.TooManyRedirects:
         print(Fore.MAGENTA + '[Error] [Exceeded {} redirects]'.format(max_redirects))
@@ -176,12 +152,14 @@ def main():
     parser.add_argument('-a', '--attacker', help='Attacker domain')
     parser.add_argument('-o', '--output', help='Output file')
     parser.add_argument('-r', '--redirect', type=int, default=DEFAULT_REDIRECTS, help='Maximum number of redirects')
+    parser.add_argument('-rc', '--recursive', help='Enable recursive scanning through wordlists (default: False)', action='store_true', default=False)
     parser.add_argument('-s', '--ssl', action='store_true', default=DEFAULT_SSL, help='Enable SSL verification')
     parser.add_argument('-x', '--method', default=DEFAULT_METHOD, help='HTTP method')
     parser.add_argument('-b', '--body', help='Body request as string or file')
     parser.add_argument('-U', '--user-agent', help='User-Agent string or wordlist file')
     parser.add_argument('-p', '--proxy', help='Proxy server (e.g., http://proxy.example.com:8080 or socks5://proxy.example.com:1080)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose mode')
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
 
     args = parser.parse_args()
 
@@ -191,6 +169,8 @@ def main():
     if args.url and args.list:
         parser.error('Please provide either a single URL or a list of URLs, not both.')
 
+    if args.recursive:
+        parser.error('Please provide -w wordlist.txt -rc')
     if not args.attacker:
         args.attacker = DEFAULT_ATTACKER
 
@@ -217,7 +197,7 @@ def main():
     for url in urls:
         user_agent = args.user_agent if args.user_agent else DEFAULT_USER_AGENT
         detect_vulnerabilities(url.strip(), args.wordlists, args.attacker, args.output, args.redirect, args.ssl,
-                               args.method, user_agent, args.verbose, args.body, args.proxy)
+                               args.method, user_agent, args.verbose, args.body, args.proxy, args.debug, args.recursive)
 
 
 if __name__ == '__main__':
