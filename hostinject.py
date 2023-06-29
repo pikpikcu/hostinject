@@ -169,8 +169,9 @@ def main():
     if args.url and args.list:
         parser.error('Please provide either a single URL or a list of URLs, not both.')
 
-    if not args.recursive:
-        parser.error('Please provide -w wordlist.txt -rc')
+#    if not args.recursive:
+#        parser.error('Please provide -w wordlist.txt -rc')
+    
     if not args.attacker:
         args.attacker = DEFAULT_ATTACKER
 
